@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Demo App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+        max-width: 760px;
+      }
+      .panel {
+        border: 1px solid #d7dce6;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+      }
+      h2 {
+        margin-top: 0;
+      }
+      .row {
+        margin-bottom: 0.8rem;
+      }
+      label {
+        display: block;
+      }
+      select,
+      button {
+        padding: 0.5rem;
+      }
+      #result {
+        margin-top: 1rem;
+        color: #0f4a20;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Demo Application</h1>
+    <p>Use this page to test the Universal Overlay Agent.</p>
+
+    <div class="panel">
+      <h2>Mode</h2>
+      <div class="row">
+        <label for="modeSelect">System mode</label>
+        <select id="modeSelect">
+          <option>Beginner</option>
+          <option>Light</option>
+          <option>Advanced</option>
+          <option>Expert</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Features</h2>
+      <div class="row">
+        <label><input type="checkbox" id="advancedMode" /> Enable advanced mode</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="analyticsFeature" /> Analytics</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="automationFeature" /> Automation engine</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="apiFeature" /> API access</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="debugTools" /> Developer debug tools</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="darkMode" /> Dark mode</label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Actions</h2>
+      <button id="saveBtn">Save settings</button>
+      <div id="result"></div>
+    </div>
+
+    <script>
+      const result = document.getElementById("result");
+      document.getElementById("saveBtn").addEventListener("click", () => {
+        result.textContent = "Settings saved.";
+      });
+    </script>
+  </body>
+</html>

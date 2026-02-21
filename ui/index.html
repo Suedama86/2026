@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Universal Overlay Agent MVP</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+        max-width: 900px;
+      }
+      h1 {
+        margin-bottom: 0.3rem;
+      }
+      p {
+        color: #333;
+      }
+      .row {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.3rem;
+        font-weight: 600;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+      .controls {
+        display: flex;
+        gap: 0.8rem;
+        margin: 1rem 0;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 0.7rem 1rem;
+        background: #155eef;
+        color: #fff;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #4b5565;
+      }
+      pre {
+        background: #f5f7fb;
+        border: 1px solid #dce3ef;
+        border-radius: 8px;
+        padding: 1rem;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+      .hint {
+        color: #5f6d7e;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Universal Overlay Agent (MVP)</h1>
+    <p class="hint">
+      Ange en webapp-URL och ett mål som "Enable advanced mode with all features".
+      Börja gärna med dry run.
+    </p>
+
+    <div class="row">
+      <label for="url">Application URL</label>
+      <input
+        id="url"
+        type="text"
+        value="http://127.0.0.1:9000/demo/demo_app.html"
+      />
+    </div>
+
+    <div class="row">
+      <label for="goal">Goal</label>
+      <input
+        id="goal"
+        type="text"
+        value="Enable advanced mode with all features"
+      />
+    </div>
+
+    <div class="row">
+      <label><input id="headless" type="checkbox" checked /> Headless browser</label>
+      <label><input id="dryRun" type="checkbox" checked /> Dry run (no changes)</label>
+    </div>
+
+    <div class="controls">
+      <button id="inspectBtn" class="secondary">Inspect</button>
+      <button id="runBtn">Run Goal</button>
+    </div>
+
+    <pre id="output">Ready.</pre>
+
+    <script>
+      const output = document.getElementById("output");
+      const urlInput = document.getElementById("url");
+      const goalInput = document.getElementById("goal");
+      const headlessInput = document.getElementById("headless");
+      const dryRunInput = document.getElementById("dryRun");
+
+      async function callApi(path, body) {
+        const response = await fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.detail || "Unknown error");
+        }
+        return payload;
+      }
+
+      document.getElementById("inspectBtn").addEventListener("click", async () => {
+        output.textContent = "Inspecting...";
+        try {
+          const payload = {
+            url: urlInput.value.trim(),
+            headless: headlessInput.checked,
+          };
+          const result = await callApi("/inspect", payload);
+          output.textContent = JSON.stringify(result, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      });
+
+      document.getElementById("runBtn").addEventListener("click", async () => {
+        output.textContent = "Running goal...";
+        try {
+          const payload = {
+            url: urlInput.value.trim(),
+            goal: goalInput.value.trim(),
+            headless: headlessInput.checked,
+            dry_run: dryRunInput.checked,
+          };
+          const result = await callApi("/run", payload);
+          output.textContent = JSON.stringify(result, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      });
+    </script>
+  </body>
+</html>
