@@ -1,0 +1,21 @@
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Packaging artifacts
+*.egg-info/
+dist/
+build/
+
+# Test / tooling caches
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Android artifacts
+android/.gradle/
+android/local.properties
+android/**/build/

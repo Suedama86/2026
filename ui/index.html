@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Universal Overlay Agent MVP</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+        max-width: 980px;
+      }
+      h1 {
+        margin-bottom: 0.3rem;
+      }
+      p {
+        color: #333;
+      }
+      .row {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.3rem;
+        font-weight: 600;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 0.6rem;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin: 1rem 0;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 0.7rem 1rem;
+        background: #155eef;
+        color: #fff;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #4b5565;
+      }
+      button.tertiary {
+        background: #0e9384;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(130px, 1fr));
+        gap: 0.7rem;
+        margin-bottom: 1rem;
+      }
+      .card {
+        border: 1px solid #dce3ef;
+        border-radius: 8px;
+        background: #fcfdff;
+        padding: 0.7rem;
+      }
+      .card .label {
+        color: #5f6d7e;
+        font-size: 0.85rem;
+      }
+      .card .value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-top: 0.2rem;
+      }
+      pre {
+        background: #f5f7fb;
+        border: 1px solid #dce3ef;
+        border-radius: 8px;
+        padding: 1rem;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+      .hint {
+        color: #5f6d7e;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Universal Overlay Agent (MVP)</h1>
+    <p class="hint">
+      Ange en webapp-URL och ett mål. Kör sedan "Preview Plan" innan "Execute Plan" för säkrare automation.
+    </p>
+
+    <div class="row">
+      <label for="url">Application URL</label>
+      <input
+        id="url"
+        type="text"
+        value="/demo/demo_app.html"
+      />
+    </div>
+
+    <div class="row">
+      <label for="goal">Goal</label>
+      <input
+        id="goal"
+        type="text"
+        value="Enable advanced mode with all features"
+      />
+    </div>
+
+    <div class="row">
+      <label><input id="headless" type="checkbox" checked /> Headless browser</label>
+      <label><input id="safeMode" type="checkbox" checked /> Safe mode</label>
+      <label><input id="dryRun" type="checkbox" checked /> Dry run (no changes)</label>
+      <label><input id="autoFinalize" type="checkbox" checked /> Auto click Save/Apply</label>
+    </div>
+
+    <div class="controls">
+      <button id="inspectBtn" class="secondary">Inspect</button>
+      <button id="planBtn" class="tertiary">Preview Plan</button>
+      <button id="runBtn">Execute Plan</button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">Inspected controls</div>
+        <div class="value" id="inspectedCount">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Planned steps</div>
+        <div class="value" id="plannedCount">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Applied</div>
+        <div class="value" id="appliedCount">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Failed</div>
+        <div class="value" id="failedCount">0</div>
+      </div>
+    </div>
+
+    <pre id="output">Ready.</pre>
+
+    <script>
+      const output = document.getElementById("output");
+      const urlInput = document.getElementById("url");
+      const goalInput = document.getElementById("goal");
+      const headlessInput = document.getElementById("headless");
+      const safeModeInput = document.getElementById("safeMode");
+      const dryRunInput = document.getElementById("dryRun");
+      const autoFinalizeInput = document.getElementById("autoFinalize");
+      const inspectedCount = document.getElementById("inspectedCount");
+      const plannedCount = document.getElementById("plannedCount");
+      const appliedCount = document.getElementById("appliedCount");
+      const failedCount = document.getElementById("failedCount");
+
+      async function callApi(path, body) {
+        const response = await fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.detail || "Unknown error");
+        }
+        return payload;
+      }
+
+      function commonPayload() {
+        return {
+          url: urlInput.value.trim(),
+          goal: goalInput.value.trim(),
+          headless: headlessInput.checked,
+          safe_mode: safeModeInput.checked,
+        };
+      }
+
+      function renderSummary(result) {
+        inspectedCount.textContent = String(result.inspected_count ?? result.count ?? 0);
+        plannedCount.textContent = String(result.planned_steps?.length ?? 0);
+        appliedCount.textContent = String(result.applied_count ?? 0);
+        failedCount.textContent = String(result.failed_count ?? 0);
+      }
+
+      document.getElementById("inspectBtn").addEventListener("click", async () => {
+        output.textContent = "Inspecting...";
+        try {
+          const payload = {
+            url: urlInput.value.trim(),
+            headless: headlessInput.checked,
+          };
+          const result = await callApi("/inspect", payload);
+          renderSummary(result);
+          output.textContent = JSON.stringify(result, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      });
+
+      document.getElementById("planBtn").addEventListener("click", async () => {
+        output.textContent = "Planning...";
+        try {
+          const result = await callApi("/plan", commonPayload());
+          renderSummary(result);
+          output.textContent = JSON.stringify(result, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      });
+
+      document.getElementById("runBtn").addEventListener("click", async () => {
+        output.textContent = "Executing...";
+        try {
+          const payload = commonPayload();
+          payload.auto_finalize = autoFinalizeInput.checked;
+          payload.dry_run = dryRunInput.checked;
+          const result = await callApi("/run", payload);
+          renderSummary(result);
+          output.textContent = JSON.stringify(result, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      });
+    </script>
+  </body>
+</html>
