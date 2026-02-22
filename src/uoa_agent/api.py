@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -19,6 +21,15 @@ app = FastAPI(
 adapter = PlaywrightWebAdapter()
 ui_dir = Path(__file__).resolve().parents[2] / "ui"
 app.mount("/static", StaticFiles(directory=ui_dir), name="static")
+
+# Allow mobile/web clients to call the API in MVP mode.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/", include_in_schema=False)
@@ -62,7 +73,9 @@ async def run_goal(request: RunRequest) -> RunResponse:
 
 
 def run() -> None:
-    uvicorn.run("uoa_agent.api:app", host="127.0.0.1", port=8000, reload=False)
+    host = os.getenv("UOA_HOST", "0.0.0.0")
+    port = int(os.getenv("UOA_PORT", "8000"))
+    uvicorn.run("uoa_agent.api:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":

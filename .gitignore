@@ -14,3 +14,8 @@ build/
 # Virtual environments
 .venv/
 venv/
+
+# Android artifacts
+android/.gradle/
+android/local.properties
+android/**/build/
