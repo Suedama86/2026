@@ -12,7 +12,7 @@ COPY src /app/src
 COPY ui /app/ui
 COPY demo /app/demo
 
-RUN pip install --upgrade pip && pip install -e .
+RUN pip install --upgrade pip && pip install .
 
 EXPOSE 8000
 

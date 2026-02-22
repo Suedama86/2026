@@ -3,7 +3,7 @@ name = "universal-overlay-agent"
 version = "0.1.0"
 description = "MVP: AI-driven overlay agent for existing web applications"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.115.0",
   "pydantic>=2.9.0",
