@@ -39,6 +39,35 @@ Servern kör på:
 > Servern lyssnar nu på `0.0.0.0` som standard för att kunna nås från mobil på samma nät.
 > Ändra vid behov med `UOA_HOST` och `UOA_PORT`.
 
+## Snabbast utan dator: kör i molnet (Render)
+
+Målet här är att du ska kunna använda verktyget direkt från Pixel via en publik URL.
+
+### 1) Publicera repo på GitHub
+
+Om koden redan ligger på GitHub kan du hoppa över detta steg.
+
+### 2) Deploya med Render Blueprint
+
+Det finns en färdig `render.yaml` i projektet.
+
+I Render:
+1. Logga in på [render.com](https://render.com).
+2. Välj **New +** > **Blueprint**.
+3. Välj ditt GitHub-repo.
+4. Deploya tjänsten (Docker byggs automatiskt).
+
+### 3) Öppna från mobilen
+
+När deploy är klar får du en URL som:
+
+`https://<din-app>.onrender.com/`
+
+Öppna den i Pixel (Chrome eller Android-appen) och kör:
+- Demoapp-URL: `/demo/demo_app.html`
+- Goal: `Enable advanced mode with all features`
+- Klicka **Preview Plan** och sedan **Execute Plan**
+
 ## Android APK (WebView-klient)
 
 För att köra verktyget enklare på Android finns ett native Android-projekt i `android/`.
@@ -72,17 +101,9 @@ UOA_HOST=0.0.0.0 UOA_PORT=8000 uoa-agent
 
 ## Demo
 
-En enkel demosida finns i `demo/demo_app.html`.
+En enkel demosida finns i `demo/demo_app.html` och serveras automatiskt via backend på:
 
-Starta en lokal filserver:
-
-```bash
-python3 -m http.server 9000
-```
-
-Öppna sedan i agentens UI:
-
-`http://127.0.0.1:9000/demo/demo_app.html`
+`/demo/demo_app.html`
 
 Ange mål:
 
@@ -95,7 +116,7 @@ Begäran:
 
 ```json
 {
-  "url": "http://127.0.0.1:9000/demo/demo_app.html",
+  "url": "http://127.0.0.1:8000/demo/demo_app.html",
   "headless": true
 }
 ```
@@ -105,7 +126,7 @@ Begäran:
 
 ```json
 {
-  "url": "http://127.0.0.1:9000/demo/demo_app.html",
+  "url": "http://127.0.0.1:8000/demo/demo_app.html",
   "goal": "Enable advanced mode with all features",
   "headless": true,
   "dry_run": false,
@@ -119,7 +140,7 @@ Begäran:
 
 ```json
 {
-  "url": "http://127.0.0.1:9000/demo/demo_app.html",
+  "url": "http://127.0.0.1:8000/demo/demo_app.html",
   "goal": "Enable advanced mode with all features",
   "headless": true,
   "safe_mode": true
@@ -132,6 +153,7 @@ Begäran:
 - `uoa_agent/web_adapter.py`: Webbinspektion och exekvering via Playwright.
 - `uoa_agent/api.py`: FastAPI-endpoints och enkel frontend.
 - `android/`: Native Android WebView-klient som kan byggas till APK.
+- `Dockerfile` + `render.yaml`: cloud deploy för mobilanvändning utan dator.
 
 ## Utbildning och pilot
 

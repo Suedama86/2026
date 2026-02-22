@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: universal-overlay-agent
+    env: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health

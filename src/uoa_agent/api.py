@@ -28,7 +28,9 @@ app = FastAPI(
 
 adapter = PlaywrightWebAdapter()
 ui_dir = Path(__file__).resolve().parents[2] / "ui"
+demo_dir = Path(__file__).resolve().parents[2] / "demo"
 app.mount("/static", StaticFiles(directory=ui_dir), name="static")
+app.mount("/demo", StaticFiles(directory=demo_dir), name="demo")
 
 # Allow mobile/web clients to call the API in MVP mode.
 app.add_middleware(
@@ -108,9 +110,18 @@ async def run_goal(request: RunRequest) -> RunResponse:
 
 
 def run() -> None:
-    host = os.getenv("UOA_HOST", "0.0.0.0")
-    port = int(os.getenv("UOA_PORT", "8000"))
+    host, port = resolve_bind()
     uvicorn.run("uoa_agent.api:app", host=host, port=port, reload=False)
+
+
+def resolve_bind() -> tuple[str, int]:
+    host = os.getenv("UOA_HOST", "0.0.0.0")
+    raw_port = os.getenv("PORT", os.getenv("UOA_PORT", "8000"))
+    try:
+        port = int(raw_port)
+    except ValueError:
+        port = 8000
+    return host, port
 
 
 if __name__ == "__main__":
