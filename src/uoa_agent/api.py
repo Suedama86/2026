@@ -9,7 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from uoa_agent.models import InspectRequest, InspectResponse, RunRequest, RunResponse
+from uoa_agent.models import (
+    InspectRequest,
+    InspectResponse,
+    PlanRequest,
+    PlanResponse,
+    RunRequest,
+    RunResponse,
+)
+from uoa_agent.planner import plan_actions
 from uoa_agent.web_adapter import PlaywrightWebAdapter
 
 app = FastAPI(
@@ -51,6 +59,23 @@ async def inspect(request: InspectRequest) -> InspectResponse:
     return InspectResponse(elements=elements, count=len(elements))
 
 
+@app.post("/plan", response_model=PlanResponse)
+async def plan(request: PlanRequest) -> PlanResponse:
+    try:
+        elements = await adapter.inspect(request.url, headless=request.headless)
+    except Exception as exc:  # pragma: no cover - runtime/browser errors
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    planned = plan_actions(request.goal, elements, safe_mode=request.safe_mode)
+    return PlanResponse(
+        goal=request.goal,
+        intents=planned.intents,
+        inspected_count=len(elements),
+        planned_steps=planned.steps,
+        warnings=planned.warnings,
+    )
+
+
 @app.post("/run", response_model=RunResponse)
 async def run_goal(request: RunRequest) -> RunResponse:
     try:
@@ -59,16 +84,26 @@ async def run_goal(request: RunRequest) -> RunResponse:
             request.goal,
             headless=request.headless,
             dry_run=request.dry_run,
+            safe_mode=request.safe_mode,
+            auto_finalize=request.auto_finalize,
         )
     except Exception as exc:  # pragma: no cover - runtime/browser errors
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    applied_count = len([log for log in logs if log.status == "applied"])
+    skipped_count = len([log for log in logs if log.status == "skipped"])
+    failed_count = len([log for log in logs if log.status == "failed"])
 
     return RunResponse(
         goal=request.goal,
         intents=plan.intents,
         inspected_count=len(elements),
         planned_steps=plan.steps,
+        warnings=plan.warnings,
         action_logs=logs,
+        applied_count=applied_count,
+        skipped_count=skipped_count,
+        failed_count=failed_count,
     )
 
 

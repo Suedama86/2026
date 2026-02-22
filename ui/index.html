@@ -8,7 +8,7 @@
       body {
         font-family: Arial, sans-serif;
         margin: 2rem;
-        max-width: 900px;
+        max-width: 980px;
       }
       h1 {
         margin-bottom: 0.3rem;
@@ -32,6 +32,7 @@
       }
       .controls {
         display: flex;
+        flex-wrap: wrap;
         gap: 0.8rem;
         margin: 1rem 0;
       }
@@ -45,6 +46,30 @@
       }
       button.secondary {
         background: #4b5565;
+      }
+      button.tertiary {
+        background: #0e9384;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(130px, 1fr));
+        gap: 0.7rem;
+        margin-bottom: 1rem;
+      }
+      .card {
+        border: 1px solid #dce3ef;
+        border-radius: 8px;
+        background: #fcfdff;
+        padding: 0.7rem;
+      }
+      .card .label {
+        color: #5f6d7e;
+        font-size: 0.85rem;
+      }
+      .card .value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-top: 0.2rem;
       }
       pre {
         background: #f5f7fb;
@@ -63,8 +88,7 @@
   <body>
     <h1>Universal Overlay Agent (MVP)</h1>
     <p class="hint">
-      Ange en webapp-URL och ett mål som "Enable advanced mode with all features".
-      Börja gärna med dry run.
+      Ange en webapp-URL och ett mål. Kör sedan "Preview Plan" innan "Execute Plan" för säkrare automation.
     </p>
 
     <div class="row">
@@ -87,12 +111,34 @@
 
     <div class="row">
       <label><input id="headless" type="checkbox" checked /> Headless browser</label>
+      <label><input id="safeMode" type="checkbox" checked /> Safe mode</label>
       <label><input id="dryRun" type="checkbox" checked /> Dry run (no changes)</label>
+      <label><input id="autoFinalize" type="checkbox" checked /> Auto click Save/Apply</label>
     </div>
 
     <div class="controls">
       <button id="inspectBtn" class="secondary">Inspect</button>
-      <button id="runBtn">Run Goal</button>
+      <button id="planBtn" class="tertiary">Preview Plan</button>
+      <button id="runBtn">Execute Plan</button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="label">Inspected controls</div>
+        <div class="value" id="inspectedCount">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Planned steps</div>
+        <div class="value" id="plannedCount">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Applied</div>
+        <div class="value" id="appliedCount">0</div>
+      </div>
+      <div class="card">
+        <div class="label">Failed</div>
+        <div class="value" id="failedCount">0</div>
+      </div>
     </div>
 
     <pre id="output">Ready.</pre>
@@ -102,7 +148,13 @@
       const urlInput = document.getElementById("url");
       const goalInput = document.getElementById("goal");
       const headlessInput = document.getElementById("headless");
+      const safeModeInput = document.getElementById("safeMode");
       const dryRunInput = document.getElementById("dryRun");
+      const autoFinalizeInput = document.getElementById("autoFinalize");
+      const inspectedCount = document.getElementById("inspectedCount");
+      const plannedCount = document.getElementById("plannedCount");
+      const appliedCount = document.getElementById("appliedCount");
+      const failedCount = document.getElementById("failedCount");
 
       async function callApi(path, body) {
         const response = await fetch(path, {
@@ -117,6 +169,22 @@
         return payload;
       }
 
+      function commonPayload() {
+        return {
+          url: urlInput.value.trim(),
+          goal: goalInput.value.trim(),
+          headless: headlessInput.checked,
+          safe_mode: safeModeInput.checked,
+        };
+      }
+
+      function renderSummary(result) {
+        inspectedCount.textContent = String(result.inspected_count ?? result.count ?? 0);
+        plannedCount.textContent = String(result.planned_steps?.length ?? 0);
+        appliedCount.textContent = String(result.applied_count ?? 0);
+        failedCount.textContent = String(result.failed_count ?? 0);
+      }
+
       document.getElementById("inspectBtn").addEventListener("click", async () => {
         output.textContent = "Inspecting...";
         try {
@@ -125,6 +193,18 @@
             headless: headlessInput.checked,
           };
           const result = await callApi("/inspect", payload);
+          renderSummary(result);
+          output.textContent = JSON.stringify(result, null, 2);
+        } catch (error) {
+          output.textContent = `Error: ${error.message}`;
+        }
+      });
+
+      document.getElementById("planBtn").addEventListener("click", async () => {
+        output.textContent = "Planning...";
+        try {
+          const result = await callApi("/plan", commonPayload());
+          renderSummary(result);
           output.textContent = JSON.stringify(result, null, 2);
         } catch (error) {
           output.textContent = `Error: ${error.message}`;
@@ -132,15 +212,13 @@
       });
 
       document.getElementById("runBtn").addEventListener("click", async () => {
-        output.textContent = "Running goal...";
+        output.textContent = "Executing...";
         try {
-          const payload = {
-            url: urlInput.value.trim(),
-            goal: goalInput.value.trim(),
-            headless: headlessInput.checked,
-            dry_run: dryRunInput.checked,
-          };
+          const payload = commonPayload();
+          payload.auto_finalize = autoFinalizeInput.checked;
+          payload.dry_run = dryRunInput.checked;
           const result = await callApi("/run", payload);
+          renderSummary(result);
           output.textContent = JSON.stringify(result, null, 2);
         } catch (error) {
           output.textContent = `Error: ${error.message}`;

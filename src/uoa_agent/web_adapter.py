@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from playwright.async_api import Error as PlaywrightError
@@ -19,6 +20,7 @@ _EXTRACT_ELEMENTS_SCRIPT = """
     '[role="switch"]',
     '[role="checkbox"]',
     '[role="menuitem"]',
+    '[aria-pressed]',
     '[contenteditable="true"]'
   ];
 
@@ -73,7 +75,16 @@ _EXTRACT_ELEMENTS_SCRIPT = """
     }
 
     const text = (el.innerText || el.textContent || '').trim();
-    const checked = ('checked' in el) ? !!el.checked : null;
+    let checked = ('checked' in el) ? !!el.checked : null;
+    if (checked === null) {
+      const ariaPressed = el.getAttribute('aria-pressed');
+      const ariaChecked = el.getAttribute('aria-checked');
+      if (ariaPressed !== null) {
+        checked = ariaPressed === 'true';
+      } else if (ariaChecked !== null) {
+        checked = ariaChecked === 'true';
+      }
+    }
     const value = ('value' in el && el.value !== undefined && el.value !== null) ? String(el.value) : null;
     const options = tag === 'select'
       ? Array.from(el.options || []).map(opt => (opt.text || '').trim()).filter(Boolean)
@@ -98,6 +109,53 @@ _EXTRACT_ELEMENTS_SCRIPT = """
 }
 """
 
+FINALIZE_KEYWORDS = {
+    "save": 4,
+    "apply": 4,
+    "update": 3,
+    "confirm": 3,
+    "done": 2,
+    "finish": 2,
+    "submit": 2,
+}
+FINALIZE_NEGATIVE_KEYWORDS = {"cancel", "close", "discard", "reset", "delete", "remove", "back"}
+
+
+def _normalize(text: str) -> str:
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+def _element_text(el: UIElement) -> str:
+    return _normalize(" ".join(part for part in [el.label, el.text, el.placeholder] if part))
+
+
+def _is_clickable(el: UIElement) -> bool:
+    return el.tag.lower() == "button" or el.role.lower() in {"button", "menuitem"}
+
+
+def _pick_finalize_uid(elements: list[UIElement]) -> int | None:
+    best_uid: int | None = None
+    best_score = 0
+    for el in elements:
+        if not _is_clickable(el):
+            continue
+
+        text = _element_text(el)
+        if not text:
+            continue
+        if any(token in text for token in FINALIZE_NEGATIVE_KEYWORDS):
+            continue
+
+        score = 0
+        for token, weight in FINALIZE_KEYWORDS.items():
+            if token in text:
+                score += weight
+
+        if score > best_score:
+            best_score = score
+            best_uid = el.uid
+    return best_uid
+
 
 class PlaywrightWebAdapter:
     def __init__(self, timeout_ms: int = 20000) -> None:
@@ -121,6 +179,8 @@ class PlaywrightWebAdapter:
         *,
         dry_run: bool = False,
         headless: bool = True,
+        safe_mode: bool = True,
+        auto_finalize: bool = True,
     ) -> tuple[list[UIElement], Plan, list[ActionLog]]:
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch(headless=headless)
@@ -130,8 +190,10 @@ class PlaywrightWebAdapter:
                 await page.wait_for_timeout(300)
 
                 elements = await self._extract_elements(page)
-                plan = plan_actions(goal, elements)
+                plan = plan_actions(goal, elements, safe_mode=safe_mode)
                 logs = await self._execute_plan(page, plan, dry_run=dry_run)
+                if not dry_run and auto_finalize:
+                    logs.extend(await self._auto_finalize(page, has_planned_steps=bool(plan.steps)))
 
                 return elements, plan, logs
             finally:
@@ -168,6 +230,39 @@ class PlaywrightWebAdapter:
 
         return logs
 
+    async def _auto_finalize(self, page: Page, *, has_planned_steps: bool) -> list[ActionLog]:
+        if not has_planned_steps:
+            return [
+                ActionLog(
+                    uid=-1,
+                    action="click",
+                    status="skipped",
+                    detail="Skipped auto-finalize because plan had no actionable steps.",
+                )
+            ]
+
+        elements = await self._extract_elements(page)
+        finalize_uid = _pick_finalize_uid(elements)
+        if finalize_uid is None:
+            return [
+                ActionLog(
+                    uid=-1,
+                    action="click",
+                    status="skipped",
+                    detail="No save/apply control found for auto-finalize.",
+                )
+            ]
+
+        log = await self._apply_step(
+            page,
+            ActionStep(
+                uid=finalize_uid,
+                action="click",
+                reason="Auto-finalize by clicking save/apply control.",
+            ),
+        )
+        return [log]
+
     async def _apply_step(self, page: Page, step: ActionStep) -> ActionLog:
         locator = page.locator(f'[data-uoa-id="{step.uid}"]')
         count = await locator.count()
@@ -192,7 +287,20 @@ class PlaywrightWebAdapter:
                 """(el) => ({
                     type: (el.getAttribute('type') || '').toLowerCase(),
                     role: (el.getAttribute('role') || '').toLowerCase(),
-                    checked: ('checked' in el) ? !!el.checked : null
+                    checked: (() => {
+                        if ('checked' in el) {
+                            return !!el.checked;
+                        }
+                        const ariaPressed = el.getAttribute('aria-pressed');
+                        if (ariaPressed !== null) {
+                            return ariaPressed === 'true';
+                        }
+                        const ariaChecked = el.getAttribute('aria-checked');
+                        if (ariaChecked !== null) {
+                            return ariaChecked === 'true';
+                        }
+                        return null;
+                    })()
                 })"""
             )
             checked = state.get("checked", None)

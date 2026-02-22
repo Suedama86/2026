@@ -10,6 +10,8 @@ Detta projekt är en första fungerande version av en app som lägger en AI-agen
   - "Turn on expert settings"
 - Planera åtgärder och utföra dem automatiskt i sidan via Playwright.
 - Köra i `dry_run` för att visa plan utan att klicka/skriver något.
+- Safe mode: undvik riskabla toggles (t.ex. kontroller med "disable/off").
+- Auto-finalize: försök klicka "Save/Apply" efter lyckad körning.
 
 > Viktigt: Detta är en MVP för webbappar. För desktopappar krävs integration med OS-tillgänglighet/API eller vision-baserad automation.
 
@@ -106,7 +108,21 @@ Begäran:
   "url": "http://127.0.0.1:9000/demo/demo_app.html",
   "goal": "Enable advanced mode with all features",
   "headless": true,
-  "dry_run": false
+  "dry_run": false,
+  "safe_mode": true,
+  "auto_finalize": true
+}
+```
+
+### `POST /plan`
+Begäran:
+
+```json
+{
+  "url": "http://127.0.0.1:9000/demo/demo_app.html",
+  "goal": "Enable advanced mode with all features",
+  "headless": true,
+  "safe_mode": true
 }
 ```
 

@@ -13,6 +13,13 @@ class InspectRequest(BaseModel):
 class RunRequest(InspectRequest):
     goal: str
     dry_run: bool = False
+    safe_mode: bool = True
+    auto_finalize: bool = True
+
+
+class PlanRequest(InspectRequest):
+    goal: str
+    safe_mode: bool = True
 
 
 class UIElement(BaseModel):
@@ -48,6 +55,7 @@ class IntentSummary(BaseModel):
 class Plan(BaseModel):
     intents: IntentSummary
     steps: list[ActionStep] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ActionLog(BaseModel):
@@ -67,4 +75,16 @@ class RunResponse(BaseModel):
     intents: IntentSummary
     inspected_count: int
     planned_steps: list[ActionStep]
+    warnings: list[str]
     action_logs: list[ActionLog]
+    applied_count: int
+    skipped_count: int
+    failed_count: int
+
+
+class PlanResponse(BaseModel):
+    goal: str
+    intents: IntentSummary
+    inspected_count: int
+    planned_steps: list[ActionStep]
+    warnings: list[str]
