@@ -1,0 +1,3 @@
+date,participant_id,app_name,scenario,goal_text,dry_run_first,success,time_minutes,manual_interventions,error_type,confidence_score,notes
+2026-02-21,P01,DemoApp,Advanced-AllFeatures,"Enable advanced mode with all features",yes,yes,9.5,0,,4,"Klarade utan stöd"
+2026-02-21,P02,DemoApp,Advanced-AllFeatures,"Enable advanced mode with all features",yes,no,15.0,2,"missed_toggle",2,"Fastnade i verifiering"

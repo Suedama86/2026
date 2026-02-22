@@ -117,6 +117,12 @@ Begäran:
 - `uoa_agent/api.py`: FastAPI-endpoints och enkel frontend.
 - `android/`: Native Android WebView-klient som kan byggas till APK.
 
+## Utbildning och pilot
+
+För ett färdigt utbildningsupplägg (2-veckors pilot, onboarding, övningar, KPI) se:
+
+- `training/README.md`
+
 ## Nästa steg för produktion
 
 - LLM-baserad planering med kontext från UI-träd + historik.
